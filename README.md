@@ -8,11 +8,12 @@ Driver for the PN532 NFC chip.  Provides an event and promise-based API, and req
 
 This implementation does not require libnfc, and should work on both X86 (32-bit or 64-bit) and ARM (RPi / Beaglebone) systems
 
-Tested on a Mac OSX 10.9 system using a UART/FTDI cable to an [Adafruit breakout board](https://www.adafruit.com/products/364)
+~~Tested on a Mac OSX 10.9 system using a UART/FTDI cable to an [Adafruit breakout board](https://www.adafruit.com/products/364)
 and on a BeagleBone using UART.  I2C support is currently a WIP at the moment.
 
 > We're trying to get a Raspberry Pi 3 Mini with a PN532 chip to interact with an Android app.
-> [image coming soon]
+> ![our nfc device](https://github.com/wnrosenberg/node-pn532/nfc-device.jpg "Our NFC Device")
+
 
 API is subject to change until the 1.0.0 release
 
