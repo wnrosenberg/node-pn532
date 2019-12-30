@@ -8,18 +8,24 @@ var START_CODE_1 = 0x00;
 var START_CODE_2 = 0xFF;
 var POSTAMBLE    = 0x00;
 
+var curTime = () => { // @WNR
+    let cur = new Date();
+    return "[" + cur.getHours() + ":" + cur.getMinutes() + ":" +
+           cur.getSeconds() + "." + cur.getMilliseconds() + "] ";
+}
+
 /*
     Represents a single communication frame for communication with the PN532 NFC Chip.
 */
 class Frame {
     // Gets the frame's data length
     getFrameLength() {
-        throw new Error('Implement in subclass');
+        throw new Error(curTime() + 'Implement in subclass');
     }
 
     // Convert Frame instance to a Buffer instance
     toBuffer() {
-        throw new Error('Implement in subclass');
+        throw new Error(curTime() + 'Implement in subclass');
     }
 
     [util.inspect.custom]() {
@@ -43,7 +49,7 @@ class Frame {
             return new DataFrame(buffer);
         }
 
-        throw new Error('Invalid Response');
+        throw new Error(curTime() + 'Invalid Response');
     }
 
     static isFrame(buffer) {
@@ -66,19 +72,45 @@ class DataFrame extends Frame {
         if (data instanceof Buffer) {
             var buffer = data;
 
-            var dataLength = buffer[3];
-            var dataStart = 6;
-            var dataEnd = dataStart + dataLength;
-            var d = new Buffer(dataLength);
+            var d, dir;
+            var dataLength = 0;
+            var dataStart = 0;
+            var dataEnd = 0;
+
+            if (Frame.isFrame(data)) {
+                this.bufferType = "frame";
+
+                // Only buffers that are frames follow these rules.
+                dataLength = buffer[3];
+                dataStart = 6;
+                dataEnd = dataStart + dataLength;
+                d = new Buffer(dataLength);
+                dir = buffer[5];
+            } else {
+                this.bufferType = "apdu";
+
+                // Buffers apparently can also be straight up APDUs
+                // (without the [00,ff,00, ... 00] frame wrapper)
+                dataLength = buffer.length;
+                dataStart = 0;
+                dataEnd = dataStart + dataLength;
+                d = new Buffer(dataLength);
+                dir = c.DIRECTION_PN532_TO_HOST;
+                // likley an APDU sending from the PN532 to the Android HCE, although this is a guess.
+            }
+            console.log(curTime() + 'dataLength, start, end');
+            console.log(dataLength);
+            console.log(dataStart);
+            console.log(dataEnd);
             buffer.copy(d, 0, dataStart, dataEnd);
 
             this._data = d;
-            this.direction = buffer[5];
+            this.direction = dir;
         } else if (data instanceof Array) {
             this._data = data;
             this._direction = direction || c.DIRECTION_HOST_TO_PN532;
         } else {
-            throw new Error('data must be an instanceof a Buffer or Array');
+            throw new Error(curTime() + 'data must be an instanceof a Buffer or Array');
         }
     }
 
@@ -110,11 +142,21 @@ class DataFrame extends Frame {
     }
 
     getDataCommand() {
-        return this._data[0];
+        if (this.bufferType === "frame") {
+            // The command for this frame.
+            return this._data[0];
+        } else if (this.bufferType === "apdu") {
+            return this._data[1]; // the INS byte
+        }
     }
 
     getDataBody() {
-        return this._data.slice(1);
+        if (this.bufferType === "frame") {
+            // The command for this frame.
+            return this._data.slice(1);
+        } else if (this.bufferType === "apdu") {
+            return this._data.slice(); // the INS byte
+        }
     }
 
     // Gets the frame's data length
@@ -130,6 +172,7 @@ class DataFrame extends Frame {
     // Gets a checksum for the frame's data.
     getDataChecksum() {
         var dataCopy = this._data.slice();
+        if (!Array.isArray(dataCopy)) dataCopy = new Array();
         dataCopy.push(this._direction);
 
         var sum = dataCopy.reduce((prev,current) => prev + current);
