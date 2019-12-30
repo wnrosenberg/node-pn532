@@ -1,5 +1,7 @@
 # PN532
 
+>forked from [techniq/node-pn532](https://github.com/techniq/node-pn532). this repo is where I'm "brainstorming" ideas for a third-party NFC device being developed by [Venturetec](https://venturetec.net) where I currently work (as of last update).
+
 Driver for the PN532 NFC chip.  Provides an event and promise-based API, and requires either:
 - [node-serialport](https://github.com/voodootikigod/node-serialport)
 - [node-i2c](https://github.com/kelly/node-i2c) (WIP)
