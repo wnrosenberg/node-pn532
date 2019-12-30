@@ -12,7 +12,7 @@ This implementation does not require libnfc, and should work on both X86 (32-bit
 and on a BeagleBone using UART.  I2C support is currently a WIP at the moment.
 
 > We're trying to get a Raspberry Pi 3 Mini with a PN532 chip to interact with an Android app.
-> ![our nfc device](https://github.com/wnrosenberg/node-pn532/nfc-device.jpg "Our NFC Device")
+> ![our nfc device](https://github.com/wnrosenberg/node-pn532/blob/master/nfc-device.jpg "Our NFC Device")
 
 
 API is subject to change until the 1.0.0 release
