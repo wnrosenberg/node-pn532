@@ -46,7 +46,7 @@ class PN532 extends EventEmitter {
         this.on('newListener', (event) => {
             // TODO: Only poll once (for each event type)
             if (event === 'tag') {
-                logger.debug(curTime() + 'Polling for tag scans...');
+                console.log(curTime() + 'Polling for tag scans...');
                 var scanTag = () => {
                     this.scanTag().then((tag) => {
                         this.emit('tag', tag);
@@ -62,14 +62,14 @@ class PN532 extends EventEmitter {
         return new Promise((resolve, reject) => {
 
             var removeListeners = () => {
-                logger.debug(curTime() + 'Removing listeners');
+                console.log(curTime() + 'Removing listeners');
                 this.frameEmitter.removeListener('frame', onFrame);
                 this.frameEmitter.removeListener('error', onError);
             };
 
             // Wire up listening to wait for response (or error) from PN532
             var onFrame = (frame) => {
-                logger.debug(curTime() + 'Response received for sendCommand', util.inspect(frame));
+                console.log(curTime() + 'Response received for sendCommand', util.inspect(frame));
                 // TODO: If no ACK after 15ms, resend? (page 40 of user guide, UART only)?
 
                 if (frame instanceof AckFrame) {
@@ -92,7 +92,7 @@ class PN532 extends EventEmitter {
             // Send command to PN532
             var dataFrame = new DataFrame(commandBuffer);
             var buffer = dataFrame.toBuffer();
-            logger.debug(curTime() + 'Sending buffer:', util.inspect(buffer));
+            console.log(curTime() + 'Sending buffer:', util.inspect(buffer));
             this.hal.write(buffer);
         });
     }
@@ -153,7 +153,7 @@ class PN532 extends EventEmitter {
         return this.sendCommand(commandBuffer)
             .then((frame) => {
                 var body = frame.getDataBody();
-                logger.debug('body', util.inspect(body));
+                console.log('body', util.inspect(body));
 
                 var numberOfTags = body[0];
                 if (numberOfTags === 1) {
@@ -192,7 +192,7 @@ class PN532 extends EventEmitter {
         return this.sendCommand(commandBuffer)
             .then((frame) => {
                 var body = frame.getDataBody();
-                logger.debug(curTime() + 'Frame data from block read:', util.inspect(body));
+                console.log(curTime() + 'Frame data from block read:', util.inspect(body));
 
                 var status = body[0];
 
@@ -211,7 +211,7 @@ class PN532 extends EventEmitter {
 
         return this.readBlock({blockAddress: 0x04})
             .then((block) => {
-                logger.debug(curTime() + 'block:', util.inspect(block));
+                console.log(curTime() + 'block:', util.inspect(block));
 
                 // Find NDEF TLV (0x03) in block of data - See NFC Forum Type 2 Tag Operation Section 2.4 (TLV Blocks)
                 var ndefValueOffset = null;
@@ -219,22 +219,22 @@ class PN532 extends EventEmitter {
                 var blockOffset = 0;
 
                 while (ndefValueOffset === null) {
-                    logger.debug(curTime() + 'blockOffset:', blockOffset, 'block.length:', block.length);
+                    console.log(curTime() + 'blockOffset:', blockOffset, 'block.length:', block.length);
                     if (blockOffset >= block.length) {
                         throw new Error(curTime() + 'Unable to locate NDEF TLV (0x03) byte in block:', block)
                     }
 
                     var type = block[blockOffset];       // Type of TLV
                     var length = block[blockOffset + 1]; // Length of TLV
-                    logger.debug(curTime() + 'blockOffset', blockOffset);
-                    logger.debug(curTime() + 'type', type, 'length', length);
+                    console.log(curTime() + 'blockOffset', blockOffset);
+                    console.log(curTime() + 'type', type, 'length', length);
 
                     if (type === c.TAG_MEM_NDEF_TLV) {
-                        logger.debug('NDEF TLV found');
+                        console.log('NDEF TLV found');
                         ndefLength = length;                  // Length proceeds NDEF_TLV type byte
                         ndefValueOffset = blockOffset + 2;    // Value (NDEF data) proceeds NDEV_TLV length byte
-                        logger.debug(curTime() + 'ndefLength:', ndefLength);
-                        logger.debug(curTime() + 'ndefValueOffset:', ndefValueOffset);
+                        console.log(curTime() + 'ndefLength:', ndefLength);
+                        console.log(curTime() + 'ndefValueOffset:', ndefValueOffset);
                     } else {
                         // Skip TLV (type byte, length byte, plus length of value)
                         blockOffset = blockOffset + 2 + length;
@@ -243,14 +243,14 @@ class PN532 extends EventEmitter {
 
                 var ndefData = block.slice(ndefValueOffset, block.length);
                 var additionalBlocks = Math.ceil((ndefValueOffset + ndefLength) / 16) - 1;
-                logger.debug(curTime() + 'Additional blocks needing to retrieve:', additionalBlocks);
+                console.log(curTime() + 'Additional blocks needing to retrieve:', additionalBlocks);
 
                 // Sequentially grab each additional 16-byte block (or 4x 4-byte pages) of data, chaining promises
                 var self = this;
                 var allDataPromise = (function retrieveBlock(blockNum) {
                     if (blockNum <= additionalBlocks) {
                         var blockAddress = 4 * (blockNum + 1);
-                        logger.debug(curTime() + 'Retrieving block:', blockNum, 'at blockAddress:', blockAddress);
+                        console.log(curTime() + 'Retrieving block:', blockNum, 'at blockAddress:', blockAddress);
                         return self.readBlock({blockAddress: blockAddress})
                             .then(function(block) {
                                 blockNum++;
@@ -285,7 +285,7 @@ class PN532 extends EventEmitter {
         return this.sendCommand(commandBuffer)
             .then((frame) => {
                 var body = frame.getDataBody();
-                logger.debug(curTime() + 'Frame data from block write:', util.inspect(body));
+                console.log(curTime() + 'Frame data from block write:', util.inspect(body));
 
                 var status = body[0];
 
@@ -310,7 +310,7 @@ class PN532 extends EventEmitter {
             c.TAG_MEM_TERMINATOR_TLV
         ]);
 
-        logger.debug(curTime() + 'block:', util.inspect(new Buffer(block)));
+        console.log(curTime() + 'block:', util.inspect(new Buffer(block)));
 
         var PAGE_SIZE = 4;
         var totalBlocks = Math.ceil(block.length / PAGE_SIZE);
@@ -326,8 +326,8 @@ class PN532 extends EventEmitter {
                     pageData.length = PAGE_SIZE; // Setting length will make sure NULL TLV (0x00) are written at the end of the page
                 }
 
-                logger.debug(curTime() + 'Writing block:', blockNum, 'at blockAddress:', blockAddress);
-                logger.debug(curTime() + 'pageData:', util.inspect(new Buffer(pageData)));
+                console.log(curTime() + 'Writing block:', blockNum, 'at blockAddress:', blockAddress);
+                console.log(curTime() + 'pageData:', util.inspect(new Buffer(pageData)));
                 return self.writeBlock(pageData, {blockAddress: blockAddress})
                 .then(function(block) {
                     blockNum++;
